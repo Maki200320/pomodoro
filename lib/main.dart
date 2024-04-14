@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:pomodoe/widget/button.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,7 +15,6 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.deepPurple,
-
       ),
       home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
@@ -31,8 +31,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Timer _timer;
-  int _secondsLeft = 25 * 60; // 25 minutes
+  int _studyTime = 25 * 60; // 25 minutes
+  int _shortBreakTime = 5 * 60; // 5 minutes
+  int _longBreakTime = 30 * 60; // 30 minutes
+  int _currentTime = 25 * 60; // Initially set to study time
+
   bool _timerRunning = false;
+  bool _studyButtonEnabled = true;
+  bool _shortBreakButtonEnabled = true;
+  bool _longBreakButtonEnabled = true;
 
   @override
   void dispose() {
@@ -40,40 +47,56 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _startTimer() {
+  void _startTimer(int duration) {
     setState(() {
       _timerRunning = true;
+      _currentTime = duration;
+      _studyButtonEnabled = false;
+      _shortBreakButtonEnabled = false;
+      _longBreakButtonEnabled = false;
     });
     const oneSecond = Duration(seconds: 1);
     _timer = Timer.periodic(oneSecond, (timer) {
-      if (_secondsLeft == 0) {
+      if (_currentTime == 0) {
         timer.cancel();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Time is up!')),
+          SnackBar(content: Text('Time is up!')),
         );
         setState(() {
           _timerRunning = false;
+          _studyButtonEnabled = true;
+          _shortBreakButtonEnabled = true;
+          _longBreakButtonEnabled = true;
         });
       } else {
         setState(() {
-          _secondsLeft--;
+          _currentTime--;
         });
       }
     });
   }
 
-  void _pauseTimer() {
-    _timer.cancel();
-    setState(() {
-      _timerRunning = false;
-    });
+  void _toggleTimer() {
+    if (_timerRunning) {
+      _timer.cancel();
+      setState(() {
+        _timerRunning = false;
+        _studyButtonEnabled = true;
+        _shortBreakButtonEnabled = true;
+        _longBreakButtonEnabled = true;
+      });
+    } else {
+      _startTimer(_currentTime);
+    }
   }
 
   void _restartTimer() {
     _timer.cancel();
     setState(() {
-      _secondsLeft = 25 * 60;
-      _timerRunning = false;
+      _currentTime = _studyTime;
+      _studyButtonEnabled = true;
+      _shortBreakButtonEnabled = true;
+      _longBreakButtonEnabled = true;
     });
   }
 
@@ -84,8 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
     var width = size.width;
 
     return Scaffold(
-      backgroundColor: Colors.black54,
-
+      backgroundColor: Colors.redAccent.shade200,
       body: Column(
         children: [
           Padding(
@@ -95,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 alignment: Alignment.center,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(width: 10),
                     SizedBox(
@@ -117,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            '${(_secondsLeft ~/ 60)}',
+                            '${(_currentTime ~/ 60)}',
                             style: const TextStyle(fontSize: 80),
                           ),
                         ),
@@ -153,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            '${(_secondsLeft % 60).toString().padLeft(2, '0')}',
+                            (_currentTime % 60).toString().padLeft(2, '0'),
                             style: const TextStyle(fontSize: 80),
                           ),
                         ),
@@ -164,19 +187,44 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          SizedBox(height: 20.0,),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TopBorderButton(
+                onPressed: ()=> _studyButtonEnabled ?  _startTimer(_studyTime) : null,
+                text: "Start Study",
+              ),
+              TopBorderButton(
+                onPressed:() =>  _shortBreakButtonEnabled ? _startTimer(_shortBreakTime) : null,
+               text: "Start Short Break",
+              ),
+              TopBorderButton(
+                onPressed: () => _longBreakButtonEnabled ?  _startTimer(_longBreakTime) : null,
+                 text: ("Start Long Break"),
+              ),
+            ],
+          ),
           Padding(
             padding: const EdgeInsets.only(top: 50),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
+                SizedBox(
                   height: 90,
                   width: 150,
                   child: ElevatedButton(
-                    onPressed: _timerRunning ? _pauseTimer : _startTimer,
+                    onPressed: () {
+                      if (_timerRunning) {
+                        _toggleTimer(); // Pause the timer
+                      } else {
+                        _startTimer(_currentTime); // Resume the timer
+                      }
+                    },
                     child: Text(
-                      _timerRunning ? "Pause" : "Start",
-                      style: const TextStyle(fontSize: 24),
+                      _timerRunning ? 'Pause' : 'Resume',
+                      style: TextStyle(fontSize: 24),
                     ),
                   ),
                 ),
@@ -184,7 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(
                   height: 90,
                   width: 150,
-
                   child: ElevatedButton(
                     onPressed: _restartTimer,
                     child: const Text(
